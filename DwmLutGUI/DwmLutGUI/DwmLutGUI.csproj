@@ -132,5 +132,8 @@
   <ItemGroup>
     <EmbeddedResource Include="smile.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="israel_flag.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

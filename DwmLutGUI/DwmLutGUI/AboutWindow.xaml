@@ -10,10 +10,16 @@
         WindowStartupLocation="CenterOwner"
         SnapsToDevicePixels="True">
     <StackPanel Margin="6">
-        <TextBlock FontSize="15" HorizontalAlignment="Center" TextAlignment="Center">
-            dwm_lut v3.9.6 by lauralex (original by ledoge)
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Image Source="israel_flag.png" Width="24" Height="17" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <TextBlock FontSize="15" VerticalAlignment="Center">
+                dwm_lut v5.0.0 - 25H2 fork by Shadow with Claude
+            </TextBlock>
+        </StackPanel>
+        <TextBlock FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0">
+            (based on lauralex fork, original by ledoge)
         </TextBlock>
-        <TextBlock HorizontalAlignment="Center" TextAlignment="Center">
+        <TextBlock HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0">
             Licensed under GPLv3 <LineBreak /> <LineBreak />
             Source code and releases hosted at <LineBreak />
             <Hyperlink RequestNavigate="OnRequestNavigate" NavigateUri="https://github.com/lauralex/dwm_lut">https://github.com/lauralex/dwm_lut</Hyperlink>
