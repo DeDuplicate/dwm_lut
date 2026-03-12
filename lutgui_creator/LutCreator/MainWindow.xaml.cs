@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -19,6 +21,17 @@ namespace LutCreator
         private bool _autoApply;
         private bool _isApplying;
         private string _selectedMonitorPosition = "0,0";
+        private static Window _antiDfOverlay;
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x20;
+        private const int WS_EX_TOOLWINDOW = 0x80;
 
         // Knob-to-param mapping
         private readonly Dictionary<KnobControl, Action<double>> _knobSetters;
@@ -222,10 +235,9 @@ namespace LutCreator
 
                 SetStatus("Applying to DWM...");
 
-                // Run inject synchronously on UI thread (matching DwmLutGUI)
-                // to prevent timing gaps between hook install and screen redraw
                 Injector.ReInject(cubeContent, _selectedMonitorPosition);
                 RedrawScreens();
+                ShowAntiDirectFlipOverlay();
 
                 SetStatus($"LUT applied ({size}^3) Br={_params.Brightness} Co={_params.Contrast} Sa={_params.Saturation} Te={_params.Temperature}");
             }
@@ -254,6 +266,7 @@ namespace LutCreator
             try
             {
                 SetStatus("Disabling...");
+                HideAntiDirectFlipOverlay();
                 Injector.Uninject();
                 RedrawScreens();
                 SetStatus("LUT disabled");
@@ -386,6 +399,7 @@ namespace LutCreator
                 SetStatus("Applying test RED LUT...");
                 Injector.ReInject(cubeContent, _selectedMonitorPosition);
                 RedrawScreens();
+                ShowAntiDirectFlipOverlay();
                 SetStatus("Test RED LUT applied! Screen should look very red. Click Disable to remove.");
             }
             catch (Exception ex)
@@ -442,6 +456,7 @@ namespace LutCreator
                 SetStatus("Applying test INVERT LUT...");
                 Injector.ReInject(cubeContent, _selectedMonitorPosition);
                 RedrawScreens();
+                ShowAntiDirectFlipOverlay();
                 SetStatus("Test INVERT LUT applied! Screen should look inverted. Click Disable to remove.");
             }
             catch (Exception ex)
@@ -461,16 +476,45 @@ namespace LutCreator
             StatusText.Text = text;
         }
 
+        private static void ShowAntiDirectFlipOverlay()
+        {
+            if (_antiDfOverlay != null) return;
+
+            var rect = System.Windows.Forms.Screen.AllScreens.Select(x => x.Bounds).Aggregate(System.Drawing.Rectangle.Union);
+            _antiDfOverlay = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 0, 0, 0)),
+                Topmost = true,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = rect.Left,
+                Top = rect.Top,
+                Width = rect.Width,
+                Height = rect.Height,
+            };
+
+            _antiDfOverlay.Show();
+
+            var hwnd = new WindowInteropHelper(_antiDfOverlay).Handle;
+            var extStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, extStyle | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW);
+        }
+
+        private static void HideAntiDirectFlipOverlay()
+        {
+            _antiDfOverlay?.Close();
+            _antiDfOverlay = null;
+        }
+
         /// <summary>
         /// Force DWM to re-render all screens by briefly showing a transparent overlay.
-        /// This triggers the LUT hooks on all monitors immediately.
-        /// Same technique as DwmLutGUI's RedrawScreens.
         /// </summary>
         private static void RedrawScreens()
         {
-            var rect = System.Windows.Forms.Screen.AllScreens
-                .Select(x => x.Bounds)
-                .Aggregate(System.Drawing.Rectangle.Union);
+            var rect = System.Windows.Forms.Screen.AllScreens.Select(x => x.Bounds).Aggregate(System.Drawing.Rectangle.Union);
 
             var overlay = new Window
             {
