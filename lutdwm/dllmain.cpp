@@ -251,7 +251,7 @@ const unsigned char COverlayContext_OverlaysEnabled_bytes_w11_25h2[] = {
 };
 
 // On 25H2: position stored as ints (not floats) at realObj+0xDC (left) and realObj+0xE0 (top)
-int COverlayContext_DeviceClipBox_offset_w11_25h2 = 0xDC;
+int COverlayContext_DeviceClipBox_offset_w11_25h2 = 0x7698;
 
 const int IOverlaySwapChain_HardwareProtected_offset_w11_25h2 = 0x4C;
 
@@ -632,9 +632,9 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 	if (isWindows11_25h2)
 	{
 		void* realObj = *(void**)context;
-		int* deviceClipBox = (int*)((unsigned char*)realObj + 0x4A64);
-		left = deviceClipBox[0];
-		top = deviceClipBox[1];
+		float* rect = (float*)((unsigned char*)realObj + 0x7698);
+		left = (int)rect[0];
+		top = (int)rect[1];
 	}
 	else if (isWindows11_24h2)
 	{
