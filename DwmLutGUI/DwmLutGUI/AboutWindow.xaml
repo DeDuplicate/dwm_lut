@@ -1,0 +1,28 @@
+﻿<Window x:Class="DwmLutGUI.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="About"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        SnapsToDevicePixels="True">
+    <StackPanel Margin="6">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Image Source="israel_flag.png" Width="24" Height="17" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <TextBlock FontSize="15" VerticalAlignment="Center">
+                dwm_lut v5.0.0 - 25H2 fork by Shadow with Claude
+            </TextBlock>
+        </StackPanel>
+        <TextBlock FontSize="12" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0">
+            (based on lauralex fork, original by ledoge)
+        </TextBlock>
+        <TextBlock HorizontalAlignment="Center" TextAlignment="Center" Margin="0,4,0,0">
+            Licensed under GPLv3 <LineBreak /> <LineBreak />
+            Source code and releases hosted at <LineBreak />
+            <Hyperlink RequestNavigate="OnRequestNavigate" NavigateUri="https://github.com/lauralex/dwm_lut">https://github.com/lauralex/dwm_lut</Hyperlink>
+        </TextBlock>
+    </StackPanel>
+</Window>

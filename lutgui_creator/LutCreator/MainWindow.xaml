@@ -1,0 +1,244 @@
+<Window x:Class="LutCreator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:LutCreator"
+        Title="LUT Creator for DwmLutGUI"
+        Height="680" Width="820"
+        MinHeight="500" MinWidth="700"
+        Background="{StaticResource BgPrimaryBrush}"
+        WindowStartupLocation="CenterScreen">
+
+    <DockPanel>
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource BgSecondaryBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+                Padding="12,4">
+            <TextBlock x:Name="StatusText" Text="Ready" FontSize="11"
+                       Foreground="{StaticResource TextDimBrush}" />
+        </Border>
+
+        <!-- Top Bar -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource BgSecondaryBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="LUT Creator" FontSize="15" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock Text="  for DwmLutGUI" FontSize="11" VerticalAlignment="Bottom"
+                               Foreground="{StaticResource TextDimBrush}" Margin="0,0,0,1" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Status: " FontSize="12" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock x:Name="ActiveStatusText" Text="Inactive" FontSize="12"
+                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="520" />
+                <ColumnDefinition Width="*" MinWidth="220" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Knobs Panel -->
+            <Border Grid.Column="0" Background="{StaticResource BgPanelBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="12,8">
+
+                        <!-- Basic -->
+                        <GroupBox Header="BASIC">
+                            <WrapPanel>
+                                <local:KnobControl x:Name="knobBrightness" Label="Brightness" Margin="4" />
+                                <local:KnobControl x:Name="knobContrast" Label="Contrast" Margin="4" />
+                                <local:KnobControl x:Name="knobSaturation" Label="Saturation" Margin="4" />
+                                <local:KnobControl x:Name="knobVibrance" Label="Vibrance" Margin="4" />
+                                <local:KnobControl x:Name="knobExposure" Label="Exposure" Margin="4" />
+                                <local:KnobControl x:Name="knobGamma" Label="Gamma" Margin="4" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                        <!-- Color -->
+                        <GroupBox Header="COLOR">
+                            <WrapPanel>
+                                <local:KnobControl x:Name="knobTemperature" Label="Temperature" Margin="4" />
+                                <local:KnobControl x:Name="knobTint" Label="Tint" Margin="4" />
+                                <local:KnobControl x:Name="knobHueShift" Label="Hue Shift"
+                                                   Minimum="-180" Maximum="180" Margin="4" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                        <!-- Per-Channel -->
+                        <GroupBox Header="CHANNELS">
+                            <WrapPanel>
+                                <local:KnobControl x:Name="knobRedGamma" Label="R Gamma"
+                                                   KnobColor="#FFFF6B6B" Margin="4" />
+                                <local:KnobControl x:Name="knobGreenGamma" Label="G Gamma"
+                                                   KnobColor="#FF51CF66" Margin="4" />
+                                <local:KnobControl x:Name="knobBlueGamma" Label="B Gamma"
+                                                   KnobColor="#FF4A9EFF" Margin="4" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                        <!-- Color Grading: Shadows -->
+                        <GroupBox Header="SHADOWS">
+                            <WrapPanel>
+                                <local:KnobControl x:Name="knobShadowsR" Label="Shd R"
+                                                   KnobColor="#FFFF6B6B" Margin="4" />
+                                <local:KnobControl x:Name="knobShadowsG" Label="Shd G"
+                                                   KnobColor="#FF51CF66" Margin="4" />
+                                <local:KnobControl x:Name="knobShadowsB" Label="Shd B"
+                                                   KnobColor="#FF4A9EFF" Margin="4" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                        <!-- Color Grading: Highlights -->
+                        <GroupBox Header="HIGHLIGHTS">
+                            <WrapPanel>
+                                <local:KnobControl x:Name="knobHighlightsR" Label="Hi R"
+                                                   KnobColor="#FFFF6B6B" Margin="4" />
+                                <local:KnobControl x:Name="knobHighlightsG" Label="Hi G"
+                                                   KnobColor="#FF51CF66" Margin="4" />
+                                <local:KnobControl x:Name="knobHighlightsB" Label="Hi B"
+                                                   KnobColor="#FF4A9EFF" Margin="4" />
+                            </WrapPanel>
+                        </GroupBox>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: Controls Panel -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12,8">
+
+                    <!-- Monitor Selection -->
+                    <GroupBox Header="MONITOR">
+                        <StackPanel>
+                            <ComboBox x:Name="cmbMonitor" Margin="0,0,0,4" />
+                            <TextBlock x:Name="txtMonitorPos" Text="Position: 0,0" FontSize="11"
+                                       Foreground="{StaticResource TextDimBrush}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Actions -->
+                    <GroupBox Header="ACTIONS">
+                        <StackPanel>
+                            <Button x:Name="btnApply" Content="Apply to Screen" Margin="0,0,0,4"
+                                    FontWeight="SemiBold" Click="BtnApply_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <SolidColorBrush Color="#FF2A6CBF" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="BorderBrush">
+                                            <Setter.Value>
+                                                <SolidColorBrush Color="#FF4A9EFF" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button x:Name="btnDisable" Content="Disable" Margin="0,0,0,4"
+                                    Click="BtnDisable_Click" />
+                            <CheckBox x:Name="chkAutoApply" Content="Auto-apply on release"
+                                      Margin="0,4,0,0" Checked="ChkAutoApply_Changed"
+                                      Unchecked="ChkAutoApply_Changed" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- LUT Settings -->
+                    <GroupBox Header="LUT SIZE">
+                        <ComboBox x:Name="cmbLutSize" SelectedIndex="1">
+                            <ComboBoxItem Content="17x17x17" Tag="17" />
+                            <ComboBoxItem Content="33x33x33" Tag="33" />
+                            <ComboBoxItem Content="65x65x65" Tag="65" />
+                        </ComboBox>
+                    </GroupBox>
+
+                    <!-- Export -->
+                    <GroupBox Header="EXPORT">
+                        <StackPanel>
+                            <Button Content="Export .cube File" Margin="0,0,0,4"
+                                    Click="BtnExportCube_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <SolidColorBrush Color="#FF2D5A27" />
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="BorderBrush">
+                                            <Setter.Value>
+                                                <SolidColorBrush Color="#FF4A9E3F" />
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="Import .cube File" Click="BtnImportCube_Click" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Presets -->
+                    <GroupBox Header="PRESETS">
+                        <WrapPanel>
+                            <Button Content="Warm" Tag="warm" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Cool" Tag="cool" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Vintage" Tag="vintage" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Cinematic" Tag="cinematic" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="High Contrast" Tag="highContrast" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Desaturated" Tag="desaturated" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Night Mode" Tag="nightMode" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                            <Button Content="Vivid" Tag="vivid" Margin="2" Padding="8,4"
+                                    Click="PresetButton_Click" />
+                        </WrapPanel>
+                    </GroupBox>
+
+                    <!-- Debug -->
+                    <GroupBox Header="DEBUG">
+                        <StackPanel>
+                            <Button Content="Test: Strong Red Tint" Margin="0,0,0,4"
+                                    Click="BtnTestRed_Click" ToolTip="Apply a hardcoded red tint LUT to verify pipeline works" />
+                            <Button Content="Test: Invert Colors" Click="BtnTestInvert_Click"
+                                    ToolTip="Apply a hardcoded inverted LUT to verify pipeline works" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <!-- Reset -->
+                    <Button Content="Reset All" Margin="0,8,0,0" Click="BtnResetAll_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#FF4A2020" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="BorderBrush">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#FF8A3030" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>
