@@ -223,13 +223,79 @@ const int IOverlaySwapChain_HardwareProtected_offset_w11_24h2 = 0x64;
 /**
  * AOB for function COverlayContext_Present_bytes_w11_25h2
  *
- * 40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 F9 48 81 EC F8 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 EF 4C 8B 65 ?? 48 8B D9
+ * 40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 F9 48 81 EC ?? 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 EF 4C 8B ?? 77 48 8B ?? 48 8B 09
+ *
+ * Stack size and register allocation are wildcarded: they changed in dwmcore 26100.9818+ (26H2),
+ * the rest is stable. Unique match in dwmcore 26100.9711, .9818 and .9974.
  */
 const unsigned char COverlayContext_Present_bytes_w11_25h2[] = {
 	0x40, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C,
-	0x24, 0xF9, 0x48, 0x81, 0xEC, 0xF8, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x05,
-	'?', '?', '?', '?', 0x48, 0x33, 0xC4, 0x48, 0x89, 0x45, 0xEF, 0x4C, 0x8B, 0x65, '?', 0x48, 0x8B, 0xD9
+	0x24, 0xF9, 0x48, 0x81, 0xEC, '?', 0x00, 0x00, 0x00, 0x48, 0x8B, 0x05,
+	'?', '?', '?', '?', 0x48, 0x33, 0xC4, 0x48, 0x89, 0x45, 0xEF, 0x4C, 0x8B, '?', 0x77, 0x48, 0x8B, '?',
+	0x48, 0x8B, 0x09
 };
+
+/**
+ * AOB for function COverlayContext::GetMonitorTransform (25H2+)
+ *
+ * 48 83 EC 28 48 8B 09 48 8D 15 ?? ?? ?? ?? 48 8B 01 48 8B 80 ?? ?? 00 00 48 3B C2 75 0D 48 8D 81 ?? ?? 00 00 48 83 C4 28 C3
+ * CC 48 8D 15 ?? ?? ?? ?? 48 3B C2 75 0D 48 8D 81 ?? ?? 00 00
+ *
+ *   mov rcx,[rcx]            ; render target
+ *   lea rdx,[A]              ; +10: rel32 -> CLegacyRenderTarget::GetMonitorTransform
+ *   mov rax,[rcx]; mov rax,[rax+VT]   ; +20: vtable offset
+ *   cmp rax,rdx; jne; lea rax,[rcx+OFF_A]   ; +32
+ *   lea rdx,[B]              ; +45: rel32 -> CDDisplayRenderTarget::GetMonitorTransform
+ *   cmp rax,rdx; jne; lea rax,[rcx+OFF_B]   ; +57
+ *
+ * We do not call it (it is not safe on every context); we read the CMonitorTransform offsets out of it,
+ * so they survive struct layout changes between builds. Monitor {left, top} are floats at CMonitorTransform+8.
+ */
+const unsigned char COverlayContext_GetMonitorTransform_bytes_w11_25h2[] = {
+	0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0x09, 0x48, 0x8D, 0x15, '?', '?', '?', '?', 0x48, 0x8B, 0x01,
+	0x48, 0x8B, 0x80, '?', '?', 0x00, 0x00, 0x48, 0x3B, 0xC2, 0x75, 0x0D, 0x48, 0x8D, 0x81, '?', '?', 0x00, 0x00,
+	0x48, 0x83, 0xC4, 0x28, 0xC3,
+	0xCC, 0x48, 0x8D, 0x15, '?', '?', '?', '?', 0x48, 0x3B, 0xC2, 0x75, 0x0D, 0x48, 0x8D, 0x81, '?', '?', 0x00, 0x00
+};
+
+unsigned char* COverlayContext_GetMonitorTransform = NULL;
+
+// Monitor {left, top} of the render target owning a COverlayContext. False if the layout is not recognised.
+static bool GetMonitorOrigin_25H2(void* context, int* left, int* top)
+{
+	unsigned char* f = COverlayContext_GetMonitorTransform;
+	if (!f) return false;
+	__try
+	{
+		unsigned char* rt = *(unsigned char**)context;
+		void* getter = *(void**)(*(unsigned char**)rt + *(int*)(f + 20));
+		int offset;
+		if (getter == f + 14 + *(int*)(f + 10)) offset = *(int*)(f + 32);
+		else if (getter == f + 49 + *(int*)(f + 45)) offset = *(int*)(f + 57);
+		else return false;
+		// ponytail: CMonitorTransform::GetTreeBounds returns +0x18 instead of +8 when a DWM feature flag
+		// and this[0x126] are set; handle that if LUTs stop matching monitors.
+		float* rect = (float*)(rt + offset + 8);
+		*left = (int)rect[0];
+		*top = (int)rect[1];
+#if DEBUG_MODE == true
+		static int logged = 0;
+		if (logged < 8)
+		{
+			logged++;
+			char buf[200];
+			sprintf(buf, "Monitor origin: ctx=%p rt=%p offset=0x%X rect=%.1f %.1f %.1f %.1f", context, rt, offset,
+			        rect[0], rect[1], rect[2], rect[3]);
+			log_to_file(buf);
+		}
+#endif
+		return true;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
+}
 
 /**
  * AOB for function COverlayContext_IsCandidateDirectFlipCompatbile_bytes_w11_25h2
@@ -250,8 +316,6 @@ const unsigned char COverlayContext_OverlaysEnabled_bytes_w11_25h2[] = {
 	0x83, 0x3D, '?', '?', '?', '?', 0x05, 0x74, 0x09, 0x83, 0x79, 0x28, 0x01, 0x0F, 0x97, 0xC0, 0xC3
 };
 
-// On 25H2: position stored as ints (not floats) at realObj+0xDC (left) and realObj+0xE0 (top)
-int COverlayContext_DeviceClipBox_offset_w11_25h2 = 0x7698;
 
 const int IOverlaySwapChain_HardwareProtected_offset_w11_25h2 = 0x4C;
 
@@ -631,10 +695,11 @@ lutData* GetLUTDataFromCOverlayContext(void* context, bool hdr)
 
 	if (isWindows11_25h2)
 	{
-		void* realObj = *(void**)context;
-		float* rect = (float*)((unsigned char*)realObj + 0x7698);
-		left = (int)rect[0];
-		top = (int)rect[1];
+		if (!GetMonitorOrigin_25H2(context, &left, &top))
+		{
+			LOG_ONLY_ONCE("Monitor origin not readable")
+			return NULL;
+		}
 	}
 	else if (isWindows11_24h2)
 	{
@@ -1302,6 +1367,45 @@ bool COverlayContext_OverlaysEnabled_hook(void* self)
 	return COverlayContext_OverlaysEnabled_orig(self);
 }
 
+#if DEBUG_MODE == true
+// Debug only: log access violations (address + return addresses found on the stack) before DWM dies.
+static unsigned char* g_dwmcoreBase = NULL;
+static size_t g_dwmcoreSize = 0;
+static unsigned char* g_selfBase = NULL;
+static PVOID g_vehHandle = NULL;
+
+static LONG CALLBACK CrashLogger(PEXCEPTION_POINTERS info)
+{
+	static volatile LONG count = 0;
+	if (info->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || InterlockedIncrement(&count) > 4)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	std::stringstream ss;
+	ss << std::hex << "ACCESS VIOLATION tid=" << GetCurrentThreadId()
+		<< " rip=dwmcore+0x" << ((unsigned char*)info->ExceptionRecord->ExceptionAddress - g_dwmcoreBase)
+		<< " target=0x" << info->ExceptionRecord->ExceptionInformation[1]
+		<< " rcx=0x" << info->ContextRecord->Rcx << " rdx=0x" << info->ContextRecord->Rdx << " stack:";
+	NT_TIB* tib = (NT_TIB*)NtCurrentTeb();
+	int found = 0;
+	for (ULONG_PTR* sp = (ULONG_PTR*)info->ContextRecord->Rsp; (void*)sp < tib->StackBase && found < 40; sp++)
+	{
+		unsigned char* v = (unsigned char*)*sp;
+		if (v >= g_dwmcoreBase && v < g_dwmcoreBase + g_dwmcoreSize)
+		{
+			ss << " dwmcore+0x" << (v - g_dwmcoreBase);
+			found++;
+		}
+		else if (v >= g_selfBase && v < g_selfBase + 0x100000)
+		{
+			ss << " dwm_lut+0x" << (v - g_selfBase);
+			found++;
+		}
+	}
+	log_to_file(ss.str().c_str());
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 {
 	switch (fdwReason)
@@ -1385,8 +1489,15 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 						int rip_offset = *(int*)(address + 2);
 						g_pOverlayTestMode = (int*)(address + 7 + rip_offset);
 					}
+					else if (!COverlayContext_GetMonitorTransform && sizeof COverlayContext_GetMonitorTransform_bytes_w11_25h2
+						<= moduleInfo.SizeOfImage - i && !aob_match_inverse(
+							address, COverlayContext_GetMonitorTransform_bytes_w11_25h2,
+							sizeof COverlayContext_GetMonitorTransform_bytes_w11_25h2))
+					{
+						COverlayContext_GetMonitorTransform = address;
+					}
 					if (COverlayContext_Present_orig_24h2 && COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2 &&
-						COverlayContext_OverlaysEnabled_orig)
+						COverlayContext_OverlaysEnabled_orig && COverlayContext_GetMonitorTransform)
 					{
 						break;
 					}
@@ -1521,6 +1632,14 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 				(COverlayContext_Present_orig_24h2 && COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2 && COverlayContext_OverlaysEnabled_orig) && numLuts != 0)
 
 			{
+#if DEBUG_MODE == true
+				g_dwmcoreBase = (unsigned char*)dwmcore;
+				g_dwmcoreSize = moduleInfo.SizeOfImage;
+				g_selfBase = (unsigned char*)hModule;
+				g_vehHandle = AddVectoredExceptionHandler(1, CrashLogger);
+				LOG_ADDRESS("dwm_lut base: ", hModule)
+				LOG_ADDRESS("GetMonitorTransform: ", COverlayContext_GetMonitorTransform)
+#endif
 				MH_Initialize();
 				if (!isWindows11_24h2 && !isWindows11_25h2)
 					MH_CreateHook((PVOID)COverlayContext_Present_orig, (PVOID)COverlayContext_Present_hook,
@@ -1537,8 +1656,13 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 					MH_CreateHook((PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2,
 						(PVOID)COverlayContext_IsCandidateDirectFlipCompatbile_hook_24h2,
 						(PVOID*)&COverlayContext_IsCandidateDirectFlipCompatbile_orig_24h2);
-				MH_CreateHook((PVOID)COverlayContext_OverlaysEnabled_orig, (PVOID)COverlayContext_OverlaysEnabled_hook,
-				              (PVOID*)&COverlayContext_OverlaysEnabled_orig);
+				// 25H2+: do NOT hook OverlaysEnabled. dwmcore 26100.9818+ calls it and then keeps using rcx,
+				// relying on this leaf function not touching it; a C++ hook clobbers rcx and crashes DWM
+				// (AV in COverlayContext::GetMonitorTransform). OverlayTestMode = 5 below already makes the
+				// original (and its inlined copies) return false.
+				if (!isWindows11_25h2)
+					MH_CreateHook((PVOID)COverlayContext_OverlaysEnabled_orig, (PVOID)COverlayContext_OverlaysEnabled_hook,
+					              (PVOID*)&COverlayContext_OverlaysEnabled_orig);
 				MH_EnableHook(MH_ALL_HOOKS);
 				LOG_ONLY_ONCE("DWM HOOK DLL INITIALIZATION. START LOGGING")
 
@@ -1554,6 +1678,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved)
 			return FALSE;
 		}
 	case DLL_PROCESS_DETACH:
+#if DEBUG_MODE == true
+		if (g_vehHandle) RemoveVectoredExceptionHandler(g_vehHandle);
+#endif
 		// Restore OverlayTestMode
 		if (g_pOverlayTestMode != NULL)
 		{
